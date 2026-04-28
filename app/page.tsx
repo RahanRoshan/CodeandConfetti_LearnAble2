@@ -271,7 +271,7 @@ export default function Home() {
                 </h2>
                 <p className="text-sm text-slate-600">
                   {result.usedMock
-                    ? "Mock AI mode is active because no OpenAI API key was found."
+                    ? "Mock AI mode is active because LearnAble could not complete a live OpenAI request."
                     : "Generated with OpenAI."}
                 </p>
               </div>

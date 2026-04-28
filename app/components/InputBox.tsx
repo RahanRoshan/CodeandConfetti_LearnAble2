@@ -38,7 +38,7 @@ export function InputBox({
           Input
         </div>
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-          Works with mock AI when no API key is set
+          Uses OpenAI when available and falls back to mock mode
         </span>
       </div>
 

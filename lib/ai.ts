@@ -177,7 +177,12 @@ export async function processLearningContent({
     return buildMockResponse({ text, language, simplerPass });
   }
 
-  return buildOpenAIResponse({ text, language, simplerPass });
+  try {
+    return await buildOpenAIResponse({ text, language, simplerPass });
+  } catch (error) {
+    console.error("OpenAI processing failed, falling back to mock mode.", error);
+    return buildMockResponse({ text, language, simplerPass });
+  }
 }
 
 async function buildOpenAIResponse({
@@ -387,7 +392,9 @@ function simulateTranslation(
 function buildMockQuiz(originalText: string, simplifiedText: string): QuizQuestion[] {
   const sourceSegments = buildQuizSegments(originalText, simplifiedText);
   const questionCount = Math.min(5, Math.max(3, sourceSegments.length));
-  const selectedSegments = sourceSegments.slice(0, questionCount);
+  const selectedSegments = Array.from({ length: questionCount }, (_, index) => {
+    return sourceSegments[index % sourceSegments.length];
+  });
 
   return selectedSegments.map((segment, index) => {
     const questionLabel =
