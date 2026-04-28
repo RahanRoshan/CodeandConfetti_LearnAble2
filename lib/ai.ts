@@ -23,145 +23,142 @@ export type ProcessResponse = {
   usedMock: boolean;
 };
 
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-5.2";
-
-const COMPLEX_TERM_MAP: Array<[RegExp, string]> = [
-  [/\banalyze\b/gi, "study"],
-  [/\banalysis\b/gi, "study"],
-  [/\bapproximately\b/gi, "about"],
-  [/\bconsequently\b/gi, "so"],
-  [/\bconstruct\b/gi, "build"],
-  [/\bconsume\b/gi, "use"],
-  [/\bdemonstrate\b/gi, "show"],
-  [/\benvironment\b/gi, "surroundings"],
-  [/\bfunction\b/gi, "job"],
-  [/\billustrate\b/gi, "show"],
-  [/\bindividuals\b/gi, "people"],
-  [/\bindividual\b/gi, "person"],
-  [/\binitial\b/gi, "first"],
-  [/\bmethod\b/gi, "way"],
-  [/\bmultiple\b/gi, "many"],
-  [/\bnumerous\b/gi, "many"],
-  [/\bobtain\b/gi, "get"],
-  [/\bprocess\b/gi, "set of steps"],
-  [/\bproduce\b/gi, "make"],
-  [/\brequire\b/gi, "need"],
-  [/\bsignificant\b/gi, "important"],
-  [/\btherefore\b/gi, "so"],
-  [/\btransmit\b/gi, "send"],
-  [/\butilize\b/gi, "use"],
-];
-
-const EXTRA_SIMPLE_MAP: Array<[RegExp, string]> = [
-  [/\bcomplex\b/gi, "hard"],
-  [/\bconcept\b/gi, "idea"],
-  [/\bdetermine\b/gi, "find out"],
-  [/\binteract\b/gi, "work together"],
-  [/\binvestigate\b/gi, "look into"],
-  [/\bmechanism\b/gi, "how it works"],
-  [/\bstructure\b/gi, "shape"],
-];
-
-const STOP_WORDS = new Set([
-  "about",
-  "after",
-  "also",
-  "because",
-  "been",
-  "being",
-  "between",
-  "could",
-  "does",
-  "each",
-  "from",
-  "have",
-  "into",
-  "lesson",
-  "many",
-  "more",
-  "most",
-  "other",
-  "same",
-  "should",
-  "some",
-  "than",
-  "that",
-  "their",
-  "there",
-  "these",
-  "they",
-  "this",
-  "those",
-  "through",
-  "using",
-  "very",
-  "were",
-  "what",
-  "when",
-  "where",
-  "which",
-  "while",
-  "with",
-]);
-
-const TRANSLATION_MAPS: Record<
-  Exclude<LanguageCode, "en">,
-  Record<string, string>
-> = {
-  hi: {
-    and: "और",
-    because: "क्योंकि",
-    cells: "कोशिकाएं",
-    cell: "कोशिका",
-    change: "बदलाव",
-    energy: "ऊर्जा",
-    food: "भोजन",
-    helps: "मदद करता है",
-    important: "महत्वपूर्ण",
-    idea: "विचार",
-    light: "प्रकाश",
-    make: "बनाना",
-    many: "कई",
-    need: "ज़रूरत",
-    people: "लोग",
-    plants: "पौधे",
-    simple: "सरल",
-    small: "छोटा",
-    steps: "कदम",
-    use: "उपयोग",
-    water: "पानी",
-  },
-  kn: {
-    and: "ಮತ್ತು",
-    because: "ಏಕೆಂದರೆ",
-    cells: "ಕೋಶಗಳು",
-    cell: "ಕೋಶ",
-    change: "ಬದಲಾವಣೆ",
-    energy: "ಶಕ್ತಿ",
-    food: "ಆಹಾರ",
-    helps: "ಸಹಾಯ ಮಾಡುತ್ತದೆ",
-    important: "ಮುಖ್ಯ",
-    idea: "ಆಲೋಚನೆ",
-    light: "ಬೆಳಕು",
-    make: "ಮಾಡು",
-    many: "ಅನೇಕ",
-    need: "ಬೇಕು",
-    people: "ಜನರು",
-    plants: "ಸಸ್ಯಗಳು",
-    simple: "ಸರಳ",
-    small: "ಚಿಕ್ಕ",
-    steps: "ಹಂತಗಳು",
-    use: "ಬಳಸು",
-    water: "ನೀರು",
-  },
+type KnownConcept = {
+  term: string;
+  explanation: string;
+  importance: string;
 };
 
-const GENERIC_DISTRACTORS = [
-  "The text is mostly about an unrelated event.",
-  "The lesson says nothing changes or matters.",
-  "The passage focuses only on memorizing names.",
-  "The topic is presented as pure opinion with no explanation.",
-  "The text says the idea has no real purpose.",
+type LessonAnalysis = {
+  mainIdea: string;
+  processSteps: string[];
+  importance: string;
+  detailFacts: string[];
+  concept?: KnownConcept;
+};
+
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-5.2";
+
+const KNOWN_CONCEPTS: KnownConcept[] = [
+  {
+    term: "photosynthesis",
+    explanation:
+      "Photosynthesis is how plants use sunlight, water, and air to make their own food.",
+    importance:
+      "It matters because it helps plants grow and adds oxygen to the air.",
+  },
+  {
+    term: "water cycle",
+    explanation:
+      "The water cycle is how water moves from the ground to the sky and back again.",
+    importance:
+      "It matters because it keeps water moving through nature so living things can use it.",
+  },
+  {
+    term: "evaporation",
+    explanation:
+      "Evaporation is when liquid water heats up and turns into vapor.",
+    importance:
+      "It matters because it helps move water from the ground into the air.",
+  },
+  {
+    term: "condensation",
+    explanation:
+      "Condensation is when vapor cools down and turns into tiny drops of water.",
+    importance:
+      "It matters because it helps clouds form.",
+  },
+  {
+    term: "precipitation",
+    explanation:
+      "Precipitation is water that falls from clouds as rain, snow, sleet, or hail.",
+    importance:
+      "It matters because it brings water back to the ground.",
+  },
+  {
+    term: "respiration",
+    explanation:
+      "Respiration is how living things release energy from food.",
+    importance:
+      "It matters because cells need energy to stay alive and do their jobs.",
+  },
+  {
+    term: "cell division",
+    explanation:
+      "Cell division is when one cell splits to make new cells.",
+    importance:
+      "It matters because living things grow, heal, and replace old cells this way.",
+  },
+  {
+    term: "gravity",
+    explanation:
+      "Gravity is the force that pulls objects toward each other.",
+    importance:
+      "It matters because it keeps people, water, and planets in place.",
+  },
+  {
+    term: "ecosystem",
+    explanation:
+      "An ecosystem is a community of living things and the place where they live.",
+    importance:
+      "It matters because plants, animals, water, air, and soil all affect one another there.",
+  },
+  {
+    term: "food chain",
+    explanation:
+      "A food chain shows who eats whom so energy can move through living things.",
+    importance:
+      "It matters because it explains how living things depend on one another for energy.",
+  },
+];
+
+const PHRASE_REPLACEMENTS: Array<[RegExp, string]> = [
+  [/\bcontinuous movement\b/gi, "ongoing movement"],
+  [/\bconvert(?:s|ed|ing)?\b/gi, "change"],
+  [/\bchemical energy\b/gi, "stored energy"],
+  [/\bcarbon dioxide\b/gi, "a gas in the air called carbon dioxide"],
+  [/\bprecipitation\b/gi, "rain or snow"],
+  [/\bcollection\b/gi, "gathering"],
+  [/\bcondensation\b/gi, "cooling into drops"],
+  [/\bevaporation\b/gi, "turning into vapor"],
+  [/\bvapor\b/gi, "water vapor"],
+  [/\bchlorophyll\b/gi, "the green part of a plant"],
+  [/\bbiological\b/gi, "living"],
+  [/\borganisms?\b/gi, "living things"],
+  [/\butilize\b/gi, "use"],
+  [/\bobtain\b/gi, "get"],
+  [/\breleases?\b/gi, "gives off"],
+  [/\bessential\b/gi, "important"],
+  [/\bapproximately\b/gi, "about"],
+  [/\btherefore\b/gi, "so"],
+  [/\bconsequently\b/gi, "so"],
+];
+
+const DETAIL_MARKERS = /\b(first|next|then|finally|because|so|helps|important|essential|used to|turns|forms|makes|moves)\b/i;
+const IMPORTANCE_MARKERS = /\b(because|important|essential|helps|allow|allows|needed|need|so that|therefore|keeps)\b/i;
+
+const MAIN_IDEA_DISTRACTORS = [
+  "It says the topic is completely unrelated to the lesson.",
+  "It says nothing changes during the process.",
+  "It claims the passage is only about memorizing names.",
+];
+
+const DEFINITION_DISTRACTORS = [
+  "It is a tool that stops the process from happening.",
+  "It is a part of the lesson that does nothing useful.",
+  "It is a solid object that never changes.",
+];
+
+const IMPORTANCE_DISTRACTORS = [
+  "Because it has no real effect on anything else.",
+  "Because it only happens by accident and means nothing.",
+  "Because it stops all other parts of the system from working.",
+];
+
+const DETAIL_DISTRACTORS = [
+  "The passage says the process ends before anything changes.",
+  "The passage says the topic works without any steps at all.",
+  "The passage says the result happens before the cause.",
 ];
 
 export function isLanguageCode(value: unknown): value is LanguageCode {
@@ -206,30 +203,29 @@ ${text}`,
   });
 
   const parsed = parseModelPayload(response.output_text);
-  const normalized = normalizeResponse({
+  return normalizeResponse({
     ...parsed,
     language,
     usedMock: false,
   });
-
-  return normalized;
 }
 
-function buildMockResponse({
+async function buildMockResponse({
   text,
   language,
   simplerPass,
-}: ProcessRequest): ProcessResponse {
-  const simplifiedText = simplifyText(text, simplerPass);
+}: ProcessRequest): Promise<ProcessResponse> {
+  const analysis = analyzeLesson(text, simplerPass);
+  const simplifiedText = formatSimplifiedText(analysis, simplerPass);
   const translatedText =
     language === "en"
       ? simplifiedText
-      : simulateTranslation(simplifiedText, language);
+      : await translateText(simplifiedText, language);
 
   return {
     simplifiedText,
     translatedText,
-    quiz: buildMockQuiz(text, simplifiedText),
+    quiz: buildMockQuiz(analysis),
     language,
     usedMock: true,
   };
@@ -292,9 +288,7 @@ function sanitizeQuiz(
       const options = [...filteredOptions];
       while (options.length < 4) {
         options.push(
-          GENERIC_DISTRACTORS[
-            (index + options.length) % GENERIC_DISTRACTORS.length
-          ],
+          DETAIL_DISTRACTORS[(index + options.length) % DETAIL_DISTRACTORS.length],
         );
       }
 
@@ -319,24 +313,77 @@ function sanitizeQuiz(
     return cleanedQuestions;
   }
 
-  return buildMockQuiz(fallbackText, fallbackText);
+  return buildMockQuiz(analyzeLesson(fallbackText, 0));
 }
 
-function simplifyText(text: string, simplerPass: number): string {
+function analyzeLesson(text: string, simplerPass: number): LessonAnalysis {
   const normalizedText = cleanSpacing(text);
-  const baseSentences = splitIntoSentences(normalizedText);
-  const maxWords = Math.max(8, 18 - simplerPass * 3);
-
-  const transformed = baseSentences
-    .slice(0, 5)
-    .map((sentence) => simplifySentence(sentence, simplerPass, maxWords))
+  const sentences = splitIntoSentences(normalizedText).slice(0, 6);
+  const concept = detectConcept(normalizedText);
+  const simplifiedSentences = sentences
+    .map((sentence, index) =>
+      simplifySentence(sentence, simplerPass, index === 0 ? 24 : 18),
+    )
     .filter(Boolean);
 
-  if (transformed.length === 0) {
-    return "Add a longer lesson and LearnAble will rewrite it in simpler words.";
-  }
+  const detailFacts = simplifiedSentences.filter((sentence) =>
+    DETAIL_MARKERS.test(sentence),
+  );
+  const processSteps = uniqueStrings(
+    simplifiedSentences
+      .slice(concept ? 1 : 0)
+      .filter(
+        (sentence) =>
+          sentence !== concept?.explanation && !IMPORTANCE_MARKERS.test(sentence),
+      )
+      .flatMap((sentence) => expandIntoStepCandidates(sentence)),
+  ).slice(0, simplerPass > 0 ? 2 : 3);
 
-  return transformed.join("\n\n");
+  const mainIdea =
+    concept?.explanation ||
+    simplifySentence(sentences[0] || normalizedText, simplerPass, 24);
+
+  const importanceSentence =
+    simplifiedSentences.find((sentence) => IMPORTANCE_MARKERS.test(sentence)) ||
+    sentences.find((sentence) => IMPORTANCE_MARKERS.test(sentence));
+
+  const importance =
+    concept?.importance ||
+    simplifyImportance(
+      importanceSentence || simplifiedSentences.at(-1) || mainIdea,
+      simplerPass,
+    );
+
+  return {
+    mainIdea,
+    processSteps: processSteps.length > 0 ? processSteps : simplifiedSentences.slice(0, 2),
+    importance,
+    detailFacts: uniqueStrings([
+      ...processSteps,
+      ...detailFacts.filter((sentence) => !IMPORTANCE_MARKERS.test(sentence)),
+      ...simplifiedSentences.filter((sentence) => !IMPORTANCE_MARKERS.test(sentence)),
+    ]).slice(0, 3),
+    concept,
+  };
+}
+
+function formatSimplifiedText(
+  analysis: LessonAnalysis,
+  simplerPass: number,
+): string {
+  const sections = [`Main idea: ${analysis.mainIdea}`];
+
+    if (analysis.processSteps.length > 0) {
+      sections.push(
+        `How it works: ${analysis.processSteps
+          .slice(0, simplerPass > 0 ? 2 : 3)
+          .join(" ")}`,
+      );
+    }
+
+  sections.push(`Why it matters: ${analysis.importance}`);
+
+  return sections.join("\n\n");
 }
 
 function simplifySentence(
@@ -344,129 +391,266 @@ function simplifySentence(
   simplerPass: number,
   maxWords: number,
 ): string {
-  let simplified = sentence;
+  const definitionMatch = sentence.match(
+    /^(.+?) is (?:an?|the)?\s*(.+?)\s+(which|where|when|by which)\s+(.+)$/i,
+  );
 
-  for (const [pattern, replacement] of COMPLEX_TERM_MAP) {
+  if (definitionMatch) {
+    const subject = simplifyFragment(definitionMatch[1], maxWords);
+    const definition = simplifyFragment(definitionMatch[2], maxWords);
+    const tail = simplifyFragment(definitionMatch[4], maxWords);
+
+    const combined = `${capitalize(subject)} is ${definition}. It ${lowercaseFirst(
+      tail,
+    )}`;
+    return shortenSentence(combined, simplerPass, maxWords + 4);
+  }
+
+  return shortenSentence(sentence, simplerPass, maxWords);
+}
+
+function simplifyImportance(sentence: string, simplerPass: number): string {
+  const simplified = simplifySentence(sentence, simplerPass, 20);
+
+  if (/^why it matters:/i.test(simplified)) {
+    return simplified;
+  }
+
+  if (simplified.toLowerCase().startsWith("because ")) {
+    return `It matters ${lowercaseFirst(simplified)}`;
+  }
+
+  return simplified;
+}
+
+function shortenSentence(
+  sentence: string,
+  simplerPass: number,
+  maxWords: number,
+): string {
+  const cleaned = simplifyFragment(sentence, maxWords + 8);
+  const clauses = cleaned
+    .split(/,\s+|;\s+/)
+    .map((part) => cleanSpacing(part))
+    .filter(Boolean);
+
+  const keptClauses = clauses.slice(0, simplerPass > 0 ? 1 : 2);
+  const joined = keptClauses.join(", ");
+
+  return trimToWordCount(joined, Math.max(10, maxWords - simplerPass * 4));
+}
+
+function simplifyFragment(text: string, maxWords: number): string {
+  let simplified = text
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\bfor example\b/gi, " ")
+    .replace(/\bsuch as\b/gi, "like")
+    .replace(/^During this process,?\s*/i, "")
+    .replace(/^In this process,?\s*/i, "")
+    .replace(/^During this reaction,?\s*/i, "");
+
+  for (const [pattern, replacement] of PHRASE_REPLACEMENTS) {
     simplified = simplified.replace(pattern, replacement);
   }
 
-  if (simplerPass > 0) {
-    for (const [pattern, replacement] of EXTRA_SIMPLE_MAP) {
-      simplified = simplified.replace(pattern, replacement);
-    }
-  }
+  simplified = simplified
+    .replace(/\bprior to\b/gi, "before")
+    .replace(/\bsubsequent to\b/gi, "after")
+    .replace(/\btherefore\b/gi, "so")
+    .replace(/\bconsequently\b/gi, "so")
+    .replace(/\butilize\b/gi, "use")
+    .replace(/\bobtain\b/gi, "get")
+    .replace(/\brequire\b/gi, "need")
+    .replace(/\bdemonstrate\b/gi, "show")
+    .replace(/\bapproximately\b/gi, "about");
 
-  simplified = cleanSpacing(simplified);
-  const words = simplified.split(" ");
-  const trimmedWords = words.slice(0, maxWords);
-  let trimmedSentence = trimmedWords.join(" ");
-
-  if (words.length > maxWords) {
-    trimmedSentence += " ...";
-  }
-
-  trimmedSentence = trimmedSentence.replace(/\s+\.\.\.$/, "...");
-  trimmedSentence = trimmedSentence.replace(/\s+([,.!?;:])/g, "$1");
-
-  if (!/[.!?]$/.test(trimmedSentence)) {
-    trimmedSentence += ".";
-  }
-
-  return trimmedSentence.charAt(0).toUpperCase() + trimmedSentence.slice(1);
+  return trimToWordCount(simplified, maxWords);
 }
 
-function simulateTranslation(
-  simplifiedText: string,
+function expandIntoStepCandidates(sentence: string): string[] {
+  const base = sentence
+    .replace(/^During this process,?\s*/i, "")
+    .replace(/^In this process,?\s*/i, "")
+    .replace(/^During this reaction,?\s*/i, "");
+
+  const parts = base
+    .split(/,\s+and\s+|\.\s+Then\s+|\s+and then\s+/i)
+    .map((part) => ensureSentencePunctuation(cleanSpacing(part)))
+    .filter((part) => part.split(/\s+/).length >= 6);
+
+  return parts.length > 0 ? parts : [ensureSentencePunctuation(base)];
+}
+
+async function translateText(
+  text: string,
   language: Exclude<LanguageCode, "en">,
-): string {
-  const translated = simplifiedText.replace(/\b([a-zA-Z']+)\b/g, (word) => {
-    const replacement = TRANSLATION_MAPS[language][word.toLowerCase()];
-    return replacement || word;
-  });
+): Promise<string> {
+  const paragraphs = text
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
 
-  const intro = language === "hi" ? "सरल अनुवाद:\n" : "ಸರಳ ಅನುವಾದ:\n";
-
-  return `${intro}${translated}`;
-}
-
-function buildMockQuiz(originalText: string, simplifiedText: string): QuizQuestion[] {
-  const sourceSegments = buildQuizSegments(originalText, simplifiedText);
-  const questionCount = Math.min(5, Math.max(3, sourceSegments.length));
-  const selectedSegments = Array.from({ length: questionCount }, (_, index) => {
-    return sourceSegments[index % sourceSegments.length];
-  });
-
-  return selectedSegments.map((segment, index) => {
-    const questionLabel =
-      segment.keyword !== "this topic"
-        ? `What does the lesson say about ${segment.keyword}?`
-        : `What is one key idea from part ${index + 1}?`;
-
-    const distractors = sourceSegments
-      .filter((_, candidateIndex) => candidateIndex !== index)
-      .map((candidate) => candidate.summary)
-      .concat(GENERIC_DISTRACTORS)
-      .filter((option, optionIndex, allOptions) => {
-        return (
-          option !== segment.summary && allOptions.indexOf(option) === optionIndex
+  try {
+    const translatedParagraphs = await Promise.all(
+      paragraphs.map(async (paragraph) => {
+        const endpoint = new URL(
+          "https://translate.googleapis.com/translate_a/single",
         );
-      })
-      .slice(0, 3);
+        endpoint.searchParams.set("client", "gtx");
+        endpoint.searchParams.set("sl", "en");
+        endpoint.searchParams.set("tl", language);
+        endpoint.searchParams.set("dt", "t");
+        endpoint.searchParams.set("q", paragraph);
 
-    const rawOptions = [segment.summary, ...distractors];
-    while (rawOptions.length < 4) {
-      rawOptions.push(
-        GENERIC_DISTRACTORS[
-          (index + rawOptions.length) % GENERIC_DISTRACTORS.length
-        ],
-      );
-    }
+        const response = await fetch(endpoint, {
+          headers: {
+            Accept: "application/json",
+          },
+        });
 
-    const rotation = index % 4;
-    const options = rotateArray(rawOptions.slice(0, 4), rotation);
-    const correctIndex = options.indexOf(segment.summary);
+        if (!response.ok) {
+          throw new Error(`Translation request failed with ${response.status}`);
+        }
 
-    return {
-      id: `question-${index + 1}`,
-      question: questionLabel,
-      options,
-      correctIndex,
-    };
-  });
+        const payload = (await response.json()) as unknown;
+        if (!Array.isArray(payload) || !Array.isArray(payload[0])) {
+          throw new Error("Unexpected translation response format");
+        }
+
+        return (payload[0] as unknown[])
+          .map((segment) =>
+            Array.isArray(segment) && typeof segment[0] === "string"
+              ? segment[0]
+              : "",
+          )
+          .join("");
+      }),
+    );
+
+    return translatedParagraphs.join("\n\n");
+  } catch (error) {
+    console.error("Translation fallback failed, returning simplified text.", error);
+    return text;
+  }
 }
 
-function buildQuizSegments(originalText: string, simplifiedText: string) {
-  const candidateSentences = splitIntoSentences(originalText)
-    .concat(splitIntoSentences(simplifiedText))
-    .filter((sentence) => sentence.split(/\s+/).length >= 6);
+function buildMockQuiz(analysis: LessonAnalysis): QuizQuestion[] {
+  const questions: QuizQuestion[] = [];
+  let questionIndex = 1;
 
-  if (candidateSentences.length === 0) {
-    candidateSentences.push(simplifiedText || originalText);
-  }
-
-  const uniqueSentences = candidateSentences.filter(
-    (sentence, index) => candidateSentences.indexOf(sentence) === index,
+  questions.push(
+    buildQuestion({
+      id: `question-${questionIndex++}`,
+      question: "What is the main idea of this passage?",
+      correct: analysis.mainIdea,
+      distractors: MAIN_IDEA_DISTRACTORS,
+      rotation: 0,
+    }),
   );
 
-  return uniqueSentences.slice(0, 5).map((sentence) => ({
-    summary: summarizeForQuiz(sentence),
-    keyword: extractKeyword(sentence),
-  }));
+  if (analysis.concept) {
+    questions.push(
+      buildQuestion({
+        id: `question-${questionIndex++}`,
+        question: `In simple words, what is ${analysis.concept.term}?`,
+        correct: analysis.concept.explanation,
+        distractors: DEFINITION_DISTRACTORS,
+        rotation: 1,
+      }),
+    );
+  }
+
+  if (analysis.processSteps.length > 1) {
+    questions.push(
+      buildQuestion({
+        id: `question-${questionIndex++}`,
+        question: "Which step happens first in the explanation?",
+        correct: analysis.processSteps[0],
+        distractors: uniqueStrings([
+          analysis.processSteps[1],
+          analysis.processSteps[2] || DETAIL_DISTRACTORS[0],
+          DETAIL_DISTRACTORS[1],
+        ]),
+        rotation: 2,
+      }),
+    );
+
+    questions.push(
+      buildQuestion({
+        id: `question-${questionIndex++}`,
+        question: `What happens after ${trimForPrompt(analysis.processSteps[0], 8)}?`,
+        correct: analysis.processSteps[1],
+        distractors: uniqueStrings([
+          analysis.importance,
+          analysis.processSteps[2] || DETAIL_DISTRACTORS[2],
+          DETAIL_DISTRACTORS[0],
+        ]),
+        rotation: 3,
+      }),
+    );
+  }
+
+  questions.push(
+    buildQuestion({
+      id: `question-${questionIndex++}`,
+      question: "Why does this topic or process matter?",
+      correct: analysis.importance,
+      distractors: IMPORTANCE_DISTRACTORS,
+      rotation: 0,
+    }),
+  );
+
+  if (questions.length < 5 && analysis.detailFacts.length > 0) {
+    questions.push(
+      buildQuestion({
+        id: `question-${questionIndex++}`,
+        question: "Which detail matches the passage?",
+        correct: analysis.detailFacts[0],
+        distractors: DETAIL_DISTRACTORS,
+        rotation: 1,
+      }),
+    );
+  }
+
+  return questions.slice(0, 5);
 }
 
-function summarizeForQuiz(sentence: string): string {
-  const simplified = simplifySentence(sentence, 1, 12);
-  return cleanSpacing(simplified.replace(/\.\.\./g, "").replace(/[.!?]$/, ""));
+function buildQuestion({
+  id,
+  question,
+  correct,
+  distractors,
+  rotation,
+}: {
+  id: string;
+  question: string;
+  correct: string;
+  distractors: string[];
+  rotation: number;
+}): QuizQuestion {
+  const uniqueOptions = uniqueStrings([correct, ...distractors]).slice(0, 4);
+
+  while (uniqueOptions.length < 4) {
+    uniqueOptions.push(
+      DETAIL_DISTRACTORS[(rotation + uniqueOptions.length) % DETAIL_DISTRACTORS.length],
+    );
+  }
+
+  const rotatedOptions = rotateArray(uniqueOptions, rotation % 4);
+
+  return {
+    id,
+    question,
+    options: rotatedOptions.map((option) => stripTrailingPunctuation(option)),
+    correctIndex: rotatedOptions.indexOf(correct),
+  };
 }
 
-function extractKeyword(sentence: string): string {
-  const words = sentence
-    .toLowerCase()
-    .replace(/[^a-z\s]/g, " ")
-    .split(/\s+/)
-    .filter((word) => word.length > 4 && !STOP_WORDS.has(word));
-
-  return words[0] || "this topic";
+function detectConcept(text: string): KnownConcept | undefined {
+  const normalized = text.toLowerCase();
+  return KNOWN_CONCEPTS.find((concept) =>
+    normalized.includes(concept.term.toLowerCase()),
+  );
 }
 
 function splitIntoSentences(text: string): string[] {
@@ -476,8 +660,62 @@ function splitIntoSentences(text: string): string[] {
     .filter((sentence) => sentence.length > 0);
 }
 
+function trimToWordCount(text: string, maxWords: number): string {
+  const words = cleanSpacing(text).split(" ").filter(Boolean);
+  const trimmed = words.slice(0, maxWords).join(" ");
+
+  if (words.length <= maxWords) {
+    return ensureSentencePunctuation(trimmed);
+  }
+
+  return ensureSentencePunctuation(`${trimmed}...`);
+}
+
+function ensureSentencePunctuation(text: string): string {
+  const cleaned = cleanSpacing(text).replace(/\s+\.\.\.$/, "...");
+  if (!cleaned) {
+    return cleaned;
+  }
+
+  if (/[.!?]$/.test(cleaned) || cleaned.endsWith("...")) {
+    return cleaned;
+  }
+
+  return `${cleaned}.`;
+}
+
 function cleanSpacing(text: string): string {
   return text.replace(/\s+/g, " ").replace(/\s+([,.!?;:])/g, "$1").trim();
+}
+
+function uniqueStrings(items: string[]): string[] {
+  return items.filter((item, index) => item && items.indexOf(item) === index);
+}
+
+function capitalize(text: string): string {
+  if (!text) {
+    return text;
+  }
+
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function lowercaseFirst(text: string): string {
+  if (!text) {
+    return text;
+  }
+
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
+function stripTrailingPunctuation(text: string): string {
+  return text.replace(/[.!?]+$/, "");
+}
+
+function trimForPrompt(text: string, maxWords: number): string {
+  return stripTrailingPunctuation(
+    text.split(" ").slice(0, maxWords).join(" ").toLowerCase(),
+  );
 }
 
 function languageToName(language: LanguageCode): string {
