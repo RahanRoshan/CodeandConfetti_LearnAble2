@@ -363,7 +363,7 @@ export default function Home() {
 
             <div className="grid gap-4 xl:grid-cols-2">
               <OutputCard
-                title="Simplified text"
+                title="Text"
                 description={`Pass ${simplerPass + 1} explanation for the original lesson.`}
                 content={result.simplifiedText}
                 copyMessage={copyStatus.simplified}

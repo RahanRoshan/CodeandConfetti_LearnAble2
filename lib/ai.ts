@@ -27,6 +27,7 @@ type KnownConcept = {
   term: string;
   explanation: string;
   importance: string;
+  steps?: string[];
 };
 
 type LessonAnalysis = {
@@ -46,6 +47,11 @@ const KNOWN_CONCEPTS: KnownConcept[] = [
       "Photosynthesis is how plants use sunlight, water, and air to make their own food.",
     importance:
       "It matters because it helps plants grow and adds oxygen to the air.",
+    steps: [
+      "Plants take in sunlight, water, and carbon dioxide.",
+      "They use that energy to make food called glucose.",
+      "They release oxygen into the air.",
+    ],
   },
   {
     term: "water cycle",
@@ -53,6 +59,11 @@ const KNOWN_CONCEPTS: KnownConcept[] = [
       "The water cycle is how water moves from the ground to the sky and back again.",
     importance:
       "It matters because it keeps water moving through nature so living things can use it.",
+    steps: [
+      "The sun heats water and some of it rises into the air as vapor.",
+      "The vapor cools and forms clouds.",
+      "Rain or snow brings the water back to the ground.",
+    ],
   },
   {
     term: "evaporation",
@@ -60,6 +71,11 @@ const KNOWN_CONCEPTS: KnownConcept[] = [
       "Evaporation is when liquid water heats up and turns into vapor.",
     importance:
       "It matters because it helps move water from the ground into the air.",
+    steps: [
+      "Heat gives the water more energy.",
+      "The water changes from liquid into vapor.",
+      "The vapor rises into the air.",
+    ],
   },
   {
     term: "condensation",
@@ -67,6 +83,11 @@ const KNOWN_CONCEPTS: KnownConcept[] = [
       "Condensation is when vapor cools down and turns into tiny drops of water.",
     importance:
       "It matters because it helps clouds form.",
+    steps: [
+      "Water vapor in the air cools down.",
+      "It turns into tiny drops of liquid water.",
+      "Those drops can gather to form clouds.",
+    ],
   },
   {
     term: "precipitation",
@@ -74,6 +95,11 @@ const KNOWN_CONCEPTS: KnownConcept[] = [
       "Precipitation is water that falls from clouds as rain, snow, sleet, or hail.",
     importance:
       "It matters because it brings water back to the ground.",
+    steps: [
+      "Clouds collect more water droplets or ice crystals.",
+      "They become heavy.",
+      "The water falls to the ground as rain, snow, sleet, or hail.",
+    ],
   },
   {
     term: "respiration",
@@ -113,16 +139,22 @@ const KNOWN_CONCEPTS: KnownConcept[] = [
 ];
 
 const PHRASE_REPLACEMENTS: Array<[RegExp, string]> = [
-  [/\bcontinuous movement\b/gi, "ongoing movement"],
+  [/\bcontinuous movement\b/gi, "constant movement"],
   [/\bconvert(?:s|ed|ing)?\b/gi, "change"],
   [/\bchemical energy\b/gi, "stored energy"],
   [/\bcarbon dioxide\b/gi, "a gas in the air called carbon dioxide"],
-  [/\bprecipitation\b/gi, "rain or snow"],
-  [/\bcollection\b/gi, "gathering"],
-  [/\bcondensation\b/gi, "cooling into drops"],
-  [/\bevaporation\b/gi, "turning into vapor"],
-  [/\bvapor\b/gi, "water vapor"],
+  [/\bprecipitation\b/gi, "rain or snow falling from clouds"],
+  [/\bcollection\b/gi, "gathering together"],
+  [/\bcondensation\b/gi, "cooling into tiny drops"],
+  [/\bevaporation\b/gi, "water turning into vapor"],
   [/\bchlorophyll\b/gi, "the green part of a plant"],
+  [/\bmagma\b/gi, "hot melted rock under the ground"],
+  [/\blava\b/gi, "hot melted rock"],
+  [/\bcrust\b/gi, "outer layer"],
+  [/\bash\b/gi, "tiny bits of rock"],
+  [/\bgases\b/gi, "gases trapped inside"],
+  [/\bidentical cells\b/gi, "two new cells that are the same"],
+  [/\bdivides\b/gi, "splits"],
   [/\bbiological\b/gi, "living"],
   [/\borganisms?\b/gi, "living things"],
   [/\butilize\b/gi, "use"],
@@ -196,7 +228,7 @@ async function buildOpenAIResponse({
     model: OPENAI_MODEL,
     instructions:
       'You turn educational text into accessible study material. Return only valid JSON with no markdown fences, no commentary, and no extra keys. The JSON shape must be {"simplifiedText": string, "translatedText": string, "quiz": [{"id": string, "question": string, "options": string[4], "correctIndex": number}]}. Keep 3 to 5 quiz questions. Each correctIndex must be between 0 and 3.',
-    input: `Simplify the educational text so a 12-year-old can understand it. Simpler pass number: ${simplerPass}. The higher the pass number, the shorter and simpler the explanation should become. Translate the simplified explanation into ${languageName}. If the target language is English, translatedText should be natural English. Create 3 to 5 multiple-choice quiz questions based on the lesson.
+    input: `Explain the educational text in plain language so a 12-year-old can understand it. The simplifiedText must read like a direct explanation of what the user sent, with no section headers, no labels like "Main idea" or "Why it matters", and no bullet points. Simpler pass number: ${simplerPass}. The higher the pass number, the shorter and simpler the explanation should become. Translate the simplified explanation into ${languageName}. If the target language is English, translatedText should be natural English. Create 3 to 5 multiple-choice quiz questions based on the lesson.
 
 Educational text:
 ${text}`,
@@ -216,7 +248,7 @@ async function buildMockResponse({
   simplerPass,
 }: ProcessRequest): Promise<ProcessResponse> {
   const analysis = analyzeLesson(text, simplerPass);
-  const simplifiedText = formatSimplifiedText(analysis, simplerPass);
+  const simplifiedText = buildFullExplanationText(text, simplerPass, analysis);
   const translatedText =
     language === "en"
       ? simplifiedText
@@ -318,7 +350,7 @@ function sanitizeQuiz(
 
 function analyzeLesson(text: string, simplerPass: number): LessonAnalysis {
   const normalizedText = cleanSpacing(text);
-  const sentences = splitIntoSentences(normalizedText).slice(0, 6);
+  const sentences = splitIntoSentences(normalizedText);
   const concept = detectConcept(normalizedText);
   const simplifiedSentences = sentences
     .map((sentence, index) =>
@@ -329,23 +361,16 @@ function analyzeLesson(text: string, simplerPass: number): LessonAnalysis {
   const detailFacts = simplifiedSentences.filter((sentence) =>
     DETAIL_MARKERS.test(sentence),
   );
-  const processSteps = uniqueStrings(
-    simplifiedSentences
-      .slice(concept ? 1 : 0)
-      .filter(
-        (sentence) =>
-          sentence !== concept?.explanation && !IMPORTANCE_MARKERS.test(sentence),
-      )
-      .flatMap((sentence) => expandIntoStepCandidates(sentence)),
-  ).slice(0, simplerPass > 0 ? 2 : 3);
-
   const mainIdea =
     concept?.explanation ||
     simplifySentence(sentences[0] || normalizedText, simplerPass, 24);
+  const processSteps = concept?.steps
+    ? concept.steps.slice(0, simplerPass > 0 ? 2 : 3)
+    : buildProcessSteps(sentences, simplerPass, concept, mainIdea);
 
   const importanceSentence =
-    simplifiedSentences.find((sentence) => IMPORTANCE_MARKERS.test(sentence)) ||
-    sentences.find((sentence) => IMPORTANCE_MARKERS.test(sentence));
+    sentences.find((sentence) => IMPORTANCE_MARKERS.test(sentence)) ||
+    simplifiedSentences.find((sentence) => IMPORTANCE_MARKERS.test(sentence));
 
   const importance =
     concept?.importance ||
@@ -356,7 +381,7 @@ function analyzeLesson(text: string, simplerPass: number): LessonAnalysis {
 
   return {
     mainIdea,
-    processSteps: processSteps.length > 0 ? processSteps : simplifiedSentences.slice(0, 2),
+    processSteps,
     importance,
     detailFacts: uniqueStrings([
       ...processSteps,
@@ -367,23 +392,68 @@ function analyzeLesson(text: string, simplerPass: number): LessonAnalysis {
   };
 }
 
+function buildFullExplanationText(
+  text: string,
+  simplerPass: number,
+  analysis: LessonAnalysis,
+): string {
+  const sourceSentences = splitIntoSentences(cleanSpacing(text));
+
+  if (sourceSentences.length === 0) {
+    return formatSimplifiedText(analysis, simplerPass);
+  }
+
+  const explainedSentences = sourceSentences.map((sentence, index) =>
+    explainSourceSentence(sentence, index, simplerPass, analysis.concept),
+  );
+
+  const explanation = explainedSentences
+    .map((sentence, index) => normalizeExplanationSentence(sentence, index === 0))
+    .filter(Boolean)
+    .join(" ");
+
+  const normalizedImportance = normalizeForComparison(analysis.importance);
+  const alreadyExplainedImportance = explainedSentences.some(
+    (sentence) => normalizeForComparison(sentence) === normalizedImportance,
+  );
+  const sourceAlreadyIncludesImportance = sourceSentences.some((sentence) =>
+    IMPORTANCE_MARKERS.test(sentence),
+  );
+
+  if (alreadyExplainedImportance || sourceAlreadyIncludesImportance) {
+    return explanation;
+  }
+
+  const importanceSentence = normalizeExplanationSentence(analysis.importance, false);
+  return cleanSpacing(`${explanation} ${importanceSentence}`);
+}
+
 function formatSimplifiedText(
   analysis: LessonAnalysis,
   simplerPass: number,
 ): string {
-  const sections = [`Main idea: ${analysis.mainIdea}`];
+  const explanationParts = buildExplanationParts(analysis, simplerPass);
 
-    if (analysis.processSteps.length > 0) {
-      sections.push(
-        `How it works: ${analysis.processSteps
-          .slice(0, simplerPass > 0 ? 2 : 3)
-          .join(" ")}`,
-      );
-    }
+  return explanationParts
+    .map((part, index) => normalizeExplanationSentence(part, index === 0))
+    .filter(Boolean)
+    .join(" ");
+}
 
-  sections.push(`Why it matters: ${analysis.importance}`);
+function explainSourceSentence(
+  sentence: string,
+  index: number,
+  simplerPass: number,
+  concept?: KnownConcept,
+): string {
+  const cleaned = cleanSpacing(sentence);
+  const normalized = cleaned.toLowerCase();
 
-  return sections.join("\n\n");
+  if (concept && index === 0 && normalized.includes(concept.term.toLowerCase())) {
+    return concept.explanation;
+  }
+
+  return explainWholeSentence(cleaned, simplerPass, index);
 }
 
 function simplifySentence(
@@ -391,30 +461,15 @@ function simplifySentence(
   simplerPass: number,
   maxWords: number,
 ): string {
-  const definitionMatch = sentence.match(
-    /^(.+?) is (?:an?|the)?\s*(.+?)\s+(which|where|when|by which)\s+(.+)$/i,
-  );
-
-  if (definitionMatch) {
-    const subject = simplifyFragment(definitionMatch[1], maxWords);
-    const definition = simplifyFragment(definitionMatch[2], maxWords);
-    const tail = simplifyFragment(definitionMatch[4], maxWords);
-
-    const combined = `${capitalize(subject)} is ${definition}. It ${lowercaseFirst(
-      tail,
-    )}`;
-    return shortenSentence(combined, simplerPass, maxWords + 4);
-  }
-
-  return shortenSentence(sentence, simplerPass, maxWords);
+  const rewritten = rewriteForClarity(sentence);
+  return shortenSentence(rewritten, simplerPass, maxWords);
 }
 
 function simplifyImportance(sentence: string, simplerPass: number): string {
-  const simplified = simplifySentence(sentence, simplerPass, 20);
-
-  if (/^why it matters:/i.test(simplified)) {
-    return simplified;
-  }
+  const simplified = simplifyFragment(
+    rewriteForClarity(sentence),
+    simplerPass > 0 ? 18 : 28,
+  );
 
   if (simplified.toLowerCase().startsWith("because ")) {
     return `It matters ${lowercaseFirst(simplified)}`;
@@ -428,7 +483,7 @@ function shortenSentence(
   simplerPass: number,
   maxWords: number,
 ): string {
-  const cleaned = simplifyFragment(sentence, maxWords + 8);
+  const cleaned = simplifyFragment(sentence, maxWords + 10);
   const clauses = cleaned
     .split(/,\s+|;\s+/)
     .map((part) => cleanSpacing(part))
@@ -438,6 +493,24 @@ function shortenSentence(
   const joined = keptClauses.join(", ");
 
   return trimToWordCount(joined, Math.max(10, maxWords - simplerPass * 4));
+}
+
+function explainWholeSentence(
+  sentence: string,
+  simplerPass: number,
+  index: number,
+): string {
+  const rewritten = simplifySentencePreservingMeaning(sentence, simplerPass);
+
+  if (index === 0) {
+    return rewritten;
+  }
+
+  if (/^(this|these|it|they)\b/i.test(rewritten)) {
+    return rewritten;
+  }
+
+  return rewritten;
 }
 
 function simplifyFragment(text: string, maxWords: number): string {
@@ -454,6 +527,14 @@ function simplifyFragment(text: string, maxWords: number): string {
   }
 
   simplified = simplified
+    .replace(/\bis the process by which\b/gi, "is how")
+    .replace(/\bare the process by which\b/gi, "are how")
+    .replace(/\bis the way in which\b/gi, "is how")
+    .replace(/\bthis process\b/gi, "this")
+    .replace(/\bthis reaction\b/gi, "this")
+    .replace(/\bthat is called\b/gi, "called")
+    .replace(/\bused to\b/gi, "used for")
+    .replace(/\bproduce\b/gi, "make")
     .replace(/\bprior to\b/gi, "before")
     .replace(/\bsubsequent to\b/gi, "after")
     .replace(/\btherefore\b/gi, "so")
@@ -465,6 +546,78 @@ function simplifyFragment(text: string, maxWords: number): string {
     .replace(/\bapproximately\b/gi, "about");
 
   return trimToWordCount(simplified, maxWords);
+}
+
+function simplifySentencePreservingMeaning(
+  text: string,
+  simplerPass: number,
+): string {
+  let simplified = cleanSpacing(text)
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\bfor example\b/gi, " ")
+    .replace(/\bsuch as\b/gi, "like");
+
+  for (const [pattern, replacement] of PHRASE_REPLACEMENTS) {
+    simplified = simplified.replace(pattern, replacement);
+  }
+
+  simplified = rewriteForClarity(simplified)
+    .replace(/\bthis process\b/gi, "this")
+    .replace(/\bthis reaction\b/gi, "this");
+
+  if (simplerPass > 0) {
+    simplified = simplified
+      .replace(/\bin order to\b/gi, "to")
+      .replace(/\bit is important to note that\b/gi, "")
+      .replace(/\bthis means that\b/gi, "this means")
+      .replace(/\bthe reason is that\b/gi, "because");
+  }
+
+  return ensureSentencePunctuation(polishExplanationGrammar(simplified));
+}
+
+function rewriteForClarity(sentence: string): string {
+  return cleanSpacing(sentence)
+    .replace(/\bis the process by which\b/gi, "is how")
+    .replace(/\bare the process by which\b/gi, "are how")
+    .replace(/\bis the process where\b/gi, "is when")
+    .replace(/\bis a process where\b/gi, "is when")
+    .replace(/\bin which\b/gi, "where")
+    .replace(/\bwhich helps\b/gi, "and this helps")
+    .replace(/\bwhich allows\b/gi, "and this allows")
+    .replace(/\bwhich means\b/gi, "and this means")
+    .replace(/\bwhich\b/gi, "that")
+    .replace(/\bcitizens\b/gi, "people")
+    .replace(/\bsolar energy\b/gi, "sunlight")
+    .replace(/\breturns water to earth\b/gi, "brings water back to Earth")
+    .replace(/\bcauses evaporation\b/gi, "heats water so it rises into the air")
+    .replace(/\bwater vapor cools and condenses into clouds\b/gi, "the vapor cools and forms clouds")
+    .replace(/\bglucose\b/gi, "sugar");
+}
+
+function buildProcessSteps(
+  sentences: string[],
+  simplerPass: number,
+  concept?: KnownConcept,
+  mainIdea?: string,
+): string[] {
+  const normalizedMainIdea = normalizeForComparison(mainIdea || "");
+  const steps = uniqueStrings(
+    sentences
+      .slice(concept ? 1 : 0)
+      .filter((sentence) => !IMPORTANCE_MARKERS.test(sentence))
+      .flatMap((sentence) =>
+        expandIntoStepCandidates(simplifySentence(sentence, simplerPass, 16)),
+      )
+      .map((step) => cleanSpacing(step))
+      .filter(
+        (step) =>
+          step.split(/\s+/).length >= 4 &&
+          normalizeForComparison(step) !== normalizedMainIdea,
+      ),
+  );
+
+  return steps.slice(0, simplerPass > 0 ? 2 : 3);
 }
 
 function expandIntoStepCandidates(sentence: string): string[] {
@@ -692,14 +845,6 @@ function uniqueStrings(items: string[]): string[] {
   return items.filter((item, index) => item && items.indexOf(item) === index);
 }
 
-function capitalize(text: string): string {
-  if (!text) {
-    return text;
-  }
-
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
 function lowercaseFirst(text: string): string {
   if (!text) {
     return text;
@@ -710,6 +855,181 @@ function lowercaseFirst(text: string): string {
 
 function stripTrailingPunctuation(text: string): string {
   return text.replace(/[.!?]+$/, "");
+}
+
+function normalizeForComparison(text: string): string {
+  return stripTrailingPunctuation(cleanSpacing(text)).toLowerCase();
+}
+
+function normalizeExplanationSentence(
+  sentence: string,
+  isOpeningSentence: boolean,
+): string {
+  const cleaned = ensureSentencePunctuation(
+    polishExplanationGrammar(
+      cleanSpacing(sentence)
+        .replace(/^(main idea|how it works|why it matters):\s*/i, "")
+        .replace(/^it matters because/i, "This matters because")
+        .replace(/^it is important because/i, "This is important because"),
+    ),
+  );
+
+  if (!cleaned) {
+    return cleaned;
+  }
+
+  if (isOpeningSentence) {
+    return cleaned;
+  }
+
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
+
+function buildExplanationParts(
+  analysis: LessonAnalysis,
+  simplerPass: number,
+): string[] {
+  const parts: string[] = [];
+  const normalizedMainIdea = normalizeForComparison(analysis.mainIdea);
+  const normalizedImportance = normalizeForComparison(analysis.importance);
+
+  parts.push(explainMainIdea(analysis.mainIdea, simplerPass, analysis.concept));
+
+  const stepLimit = simplerPass > 0 ? 2 : 3;
+  const stepExplanations = analysis.processSteps
+    .slice(0, stepLimit)
+    .map((step, index) => explainProcessStep(step, index, simplerPass))
+    .filter(
+      (step) =>
+        step &&
+        normalizeForComparison(step) !== normalizedMainIdea &&
+        normalizeForComparison(step) !== normalizedImportance,
+    );
+
+  parts.push(...stepExplanations);
+
+  if (!parts.some((part) => normalizeForComparison(part) === normalizedImportance)) {
+    parts.push(explainImportanceIdea(analysis.importance, simplerPass));
+  }
+
+  return uniqueStrings(parts.map((part) => cleanSpacing(part))).filter(Boolean);
+}
+
+function explainMainIdea(
+  sentence: string,
+  simplerPass: number,
+  concept?: KnownConcept,
+): string {
+  if (concept?.explanation) {
+    return concept.explanation;
+  }
+
+  const cleaned = stripTrailingPunctuation(cleanSpacing(sentence));
+  const lower = cleaned.toLowerCase();
+
+  if (lower.includes(" is how ")) {
+    return cleaned;
+  }
+
+  const whereMatch = cleaned.match(/^(.+?) is (?:a|an|the)?\s*(.+?) where (.+)$/i);
+  if (whereMatch) {
+    const subject = cleanSpacing(whereMatch[1]);
+    const category = cleanSpacing(whereMatch[2]);
+    const detail = simplifyFragment(whereMatch[3], simplerPass > 0 ? 10 : 14);
+    return `${subject} is ${chooseSimpleCategory(category)} where ${lowercaseFirst(detail)}`;
+  }
+
+  const descriptionMatch = cleaned.match(/^(.+?) describes (.+)$/i);
+  if (descriptionMatch) {
+    return `${cleanSpacing(descriptionMatch[1])} means ${lowercaseFirst(
+      simplifyFragment(descriptionMatch[2], simplerPass > 0 ? 10 : 16),
+    )}`;
+  }
+
+  const generalMatch = cleaned.match(/^(.+?) is (.+)$/i);
+  if (generalMatch) {
+    const subject = cleanSpacing(generalMatch[1]);
+    const rest = simplifyFragment(generalMatch[2], simplerPass > 0 ? 10 : 16);
+    return `${subject} means ${lowercaseFirst(rest)}`;
+  }
+
+  return cleaned;
+}
+
+function explainProcessStep(
+  step: string,
+  index: number,
+  simplerPass: number,
+): string {
+  const cleaned = stripTrailingPunctuation(cleanSpacing(step));
+  const simplified = polishExplanationGrammar(
+    simplifyFragment(cleaned, simplerPass > 0 ? 10 : 15),
+  );
+
+  if (index === 0) {
+    return `It works like this: ${lowercaseFirst(simplified)}`;
+  }
+
+  if (index === 1) {
+    return `Then ${lowercaseFirst(simplified)}`;
+  }
+
+  return `After that, ${lowercaseFirst(simplified)}`;
+}
+
+function explainImportanceIdea(sentence: string, simplerPass: number): string {
+  const cleaned = stripTrailingPunctuation(cleanSpacing(sentence));
+  const lower = cleaned.toLowerCase();
+
+  if (lower.startsWith("this matters because")) {
+    return cleaned;
+  }
+
+  if (lower.startsWith("it matters because")) {
+    return cleaned.replace(/^it matters because/i, "This matters because");
+  }
+
+  if (lower.startsWith("it is important because")) {
+    return cleaned.replace(/^it is important because/i, "This is important because");
+  }
+
+  if (lower.startsWith("because ")) {
+    return `This matters because ${lowercaseFirst(cleaned.slice(8))}`;
+  }
+
+  const simplified = polishExplanationGrammar(
+    simplifyFragment(cleaned, simplerPass > 0 ? 14 : 22),
+  );
+  return `This matters because ${lowercaseFirst(stripTrailingPunctuation(simplified))}`;
+}
+
+function chooseSimpleCategory(category: string): string {
+  const normalized = category.toLowerCase();
+
+  if (normalized.includes("system of government")) {
+    return "a way of running a government";
+  }
+
+  if (normalized.includes("process")) {
+    return "a process";
+  }
+
+  if (normalized.includes("cycle")) {
+    return "a cycle";
+  }
+
+  return `a ${stripLeadingArticle(category)}`;
+}
+
+function stripLeadingArticle(text: string): string {
+  return cleanSpacing(text).replace(/^(a|an|the)\s+/i, "");
+}
+
+function polishExplanationGrammar(text: string): string {
+  return cleanSpacing(text)
+    .replace(/\bthey gives off\b/gi, "they release")
+    .replace(/\bit gives off\b/gi, "it releases")
+    .replace(/\bthis gives off\b/gi, "this releases");
 }
 
 function trimForPrompt(text: string, maxWords: number): string {
