@@ -31,19 +31,22 @@ export function InputBox({
   const hasInput = value.trim().length > 0;
 
   return (
-    <section className="rounded-[32px] border border-white/80 bg-white/88 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.09)] backdrop-blur-sm sm:p-6">
+    <section className="rounded-[32px] border border-white/80 bg-white/88 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.09)] backdrop-blur-sm transition-colors dark:border-slate-800/80 dark:bg-slate-900/88 dark:shadow-[0_24px_70px_rgba(2,8,23,0.42)] sm:p-6">
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.15em] text-teal-700">
           <Sparkles className="size-4" aria-hidden="true" />
           Input
         </div>
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
           Uses OpenAI when available and falls back to mock mode
         </span>
       </div>
 
       <div className="mt-5 space-y-3">
-        <label htmlFor="lesson-input" className="text-sm font-medium text-slate-800">
+        <label
+          htmlFor="lesson-input"
+          className="text-sm font-medium text-slate-800 dark:text-slate-100"
+        >
           Paste educational content
         </label>
         <textarea
@@ -51,7 +54,7 @@ export function InputBox({
           value={value}
           onChange={(event) => onChangeValue(event.target.value)}
           placeholder="Paste a science, history, or textbook passage here. LearnAble will simplify it, translate it, and create a quick quiz."
-          className="min-h-64 w-full resize-y rounded-[28px] border border-slate-200 bg-slate-50/70 px-5 py-4 text-base leading-7 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-500/20"
+          className="min-h-64 w-full resize-y rounded-[28px] border border-slate-200 bg-slate-50/70 px-5 py-4 text-base leading-7 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-500/20 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-950"
         />
       </div>
 
@@ -74,7 +77,7 @@ export function InputBox({
             type="button"
             onClick={onExplainSimpler}
             disabled={!hasInput || isLoading}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:text-white dark:focus:ring-offset-slate-900 dark:disabled:border-slate-800 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
           >
             <WandSparkles className="size-4" aria-hidden="true" />
             Explain Simpler
@@ -83,7 +86,7 @@ export function InputBox({
             type="button"
             onClick={onProcess}
             disabled={!hasInput || isLoading}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-medium text-white shadow-[0_14px_32px_rgba(15,23,42,0.22)] transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-medium text-white shadow-[0_14px_32px_rgba(15,23,42,0.22)] transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-teal-500 dark:text-slate-950 dark:shadow-[0_14px_32px_rgba(13,148,136,0.28)] dark:hover:bg-teal-400 dark:focus:ring-offset-slate-900 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
           >
             {isLoading ? (
               <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
@@ -95,7 +98,7 @@ export function InputBox({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col gap-2 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-4 flex flex-col gap-2 text-sm text-slate-500 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between">
         <p>{value.trim().split(/\s+/).filter(Boolean).length} words ready to process.</p>
         <p>
           Language changes refresh the current result automatically after the

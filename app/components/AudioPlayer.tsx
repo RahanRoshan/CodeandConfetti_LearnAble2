@@ -108,24 +108,28 @@ export function AudioPlayer({
   }
 
   return (
-    <section className="flex h-full flex-col rounded-[28px] border border-white/80 bg-white/88 p-6 shadow-[0_18px_54px_rgba(15,23,42,0.08)]">
+    <section className="flex h-full flex-col rounded-[28px] border border-white/80 bg-white/88 p-6 shadow-[0_18px_54px_rgba(15,23,42,0.08)] transition-colors dark:border-slate-800/80 dark:bg-slate-900/88 dark:shadow-[0_18px_54px_rgba(2,8,23,0.38)]">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-xl font-semibold tracking-tight text-slate-950">
+          <h3 className="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">
             Audio player
           </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
             Listen to the current output with your browser&apos;s speech engine.
           </p>
         </div>
         <Volume2 className="mt-1 size-5 text-teal-700" aria-hidden="true" />
       </div>
 
-      <div className="mt-6 flex flex-1 flex-col justify-between rounded-[24px] bg-slate-50 px-5 py-4">
+      <div className="mt-6 flex flex-1 flex-col justify-between rounded-[24px] bg-slate-50 px-5 py-4 dark:bg-slate-950">
         <div className="space-y-3">
-          <p className="text-sm font-medium text-slate-600">Playback language</p>
-          <p className="text-base font-semibold text-slate-900">{language}</p>
-          <p className="text-sm leading-6 text-slate-500">
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+            Playback language
+          </p>
+          <p className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            {language}
+          </p>
+          <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">
             {isSupported
               ? "Play reads the simplified English version or the translated language selection."
               : "This browser does not expose speech synthesis, so audio is unavailable here."}
@@ -137,7 +141,7 @@ export function AudioPlayer({
             type="button"
             onClick={handlePlay}
             disabled={!isSupported || !text.trim() || isSpeaking}
-            className="inline-flex h-11 items-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-medium text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="inline-flex h-11 items-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-medium text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-teal-500 dark:text-slate-950 dark:hover:bg-teal-400 dark:focus:ring-offset-slate-900 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
           >
             <PlayCircle className="size-4" aria-hidden="true" />
             Play
@@ -146,7 +150,7 @@ export function AudioPlayer({
             type="button"
             onClick={handleStop}
             disabled={!isSupported || !isSpeaking}
-            className="inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+            className="inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:text-white dark:focus:ring-offset-slate-900 dark:disabled:border-slate-800 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
           >
             <PauseCircle className="size-4" aria-hidden="true" />
             Stop
@@ -154,7 +158,9 @@ export function AudioPlayer({
         </div>
       </div>
 
-      <p className="mt-3 min-h-5 text-sm text-slate-500">{statusMessage}</p>
+      <p className="mt-3 min-h-5 text-sm text-slate-500 dark:text-slate-400">
+        {statusMessage}
+      </p>
     </section>
   );
 }

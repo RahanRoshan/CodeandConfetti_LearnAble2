@@ -14,13 +14,13 @@ export function LanguageSelector({
   disabled = false,
 }: LanguageSelectorProps) {
   return (
-    <label className="flex min-w-0 flex-col gap-2 text-sm font-medium text-slate-700">
+    <label className="flex min-w-0 flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
       Output language
       <select
         value={selectedLanguage}
         onChange={(event) => onChange(event.target.value as LanguageCode)}
         disabled={disabled}
-        className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 disabled:cursor-not-allowed disabled:bg-slate-100"
+        className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:disabled:bg-slate-800"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
