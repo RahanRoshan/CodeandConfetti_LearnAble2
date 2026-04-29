@@ -21,3 +21,6 @@ Identified errors and issues in the generated website.
 Tested and applied fixes to improve functionality and usability.
 Debugged problems related to UI and feature performance.
 Optimized the platform for smoother operation and better accessibility.
+
+Checkpoint 5:
+Added darkmode/lightmode to the website so now its better for viewing 
